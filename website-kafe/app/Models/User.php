@@ -6,8 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
+use Filament\Models\Contracts\HasName;
 
-class User extends Authenticatable
+class User extends Authenticatable implements FilamentUser, HasName
 {
     use HasFactory, Notifiable;
 
@@ -49,5 +52,15 @@ class User extends Authenticatable
     public function stokMasuks(): HasMany
     {
         return $this->hasMany(StokMasuk::class, 'manajer_id');
+    }
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return in_array($this->role, ['Manajer', 'Kasir'], true);
+    }
+
+    public function getFilamentName(): string
+    {
+        return $this->nama ?? $this->username ?? 'Pengguna';
     }
 }
