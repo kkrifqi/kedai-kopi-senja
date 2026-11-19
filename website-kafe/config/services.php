@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'supplier_kafe' => [
+        'url' => env('LAYANAN_URL'),
+        'api_key' => env('LAYANAN_API_KEY'),
+    ],
+
 ];

@@ -10,8 +10,8 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        $passwordManajer = env('INITIAL_MANAGER_PASSWORD');
-        $passwordKasir = env('INITIAL_CASHIER_PASSWORD');
+        $passwordManajer = env('PASSWORD_MANAJER');
+        $passwordKasir = env('PASSWORD_KASIR');
 
         if (!$passwordManajer || !$passwordKasir) {
             throw new RuntimeException(

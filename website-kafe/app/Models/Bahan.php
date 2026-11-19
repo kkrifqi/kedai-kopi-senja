@@ -11,6 +11,7 @@ class Bahan extends Model
     use HasFactory;
 
     protected $fillable = [
+        'kode',
         'nama',
         'satuan_dasar',
         'stok_sekarang',
@@ -27,6 +28,25 @@ class Bahan extends Model
             'harga_sekarang' => 'decimal:2',
             'tanggal_update_harga' => 'date',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function ($bahan) {
+            if (empty($bahan->kode)) {
+                $nomor = 21;
+
+                do {
+                    $kode = 'BHN-' . str_pad($nomor, 3, '0', STR_PAD_LEFT);
+
+                    $sudahAda = static::where('kode', $kode)->exists();
+
+                    $nomor++;
+                } while ($sudahAda);
+
+                $bahan->kode = $kode;
+            }
+        });
     }
 
     // Relasi ke tabel Resep

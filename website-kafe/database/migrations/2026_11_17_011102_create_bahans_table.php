@@ -13,11 +13,16 @@ return new class extends Migration
     {
         Schema::create('bahans', function (Blueprint $table) {
             $table->id();
+            $table->string('kode')->unique();
+            $table->string('nama')->unique();
+
+            $table->unsignedBigInteger('stok_sekarang')->default(0);
             $table->enum('satuan_dasar', ['g', 'ml', 'pcs']);
-            $table->decimal('stok_sekarang', 12, 3)->default(0);
-            $table->decimal('batas_minimum', 12, 3)->default(0);
+            $table->unsignedBigInteger('batas_minimum')->default(0);
+
             $table->decimal('harga_sekarang', 12, 2)->default(0);
             $table->date('tanggal_update_harga')->nullable();
+
             $table->timestamps();
         });
     }
