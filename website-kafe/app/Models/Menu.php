@@ -31,7 +31,7 @@ class Menu extends Model
     {
         return $this->hasMany(Resep::class, 'menu_id');
     }
-
+    
     // Relasi ke tabel DetailPesanan
     public function detailPesanans(): HasMany
     {

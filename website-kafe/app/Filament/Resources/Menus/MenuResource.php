@@ -21,6 +21,11 @@ class MenuResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
     protected static ?string $recordTitleAttribute = 'nama';
+
+    protected static string|\UnitEnum|null $navigationGroup = 'Manajemen Kafe';
+
+    protected static ?string $navigationLabel = 'Menu';
+    
     public static function form(Schema $schema): Schema
     {
         return MenuForm::configure($schema);

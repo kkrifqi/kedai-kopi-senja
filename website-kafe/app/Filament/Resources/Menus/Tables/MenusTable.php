@@ -2,6 +2,9 @@
 
 namespace App\Filament\Resources\Menus\Tables;
 
+use App\Models\Menu;
+use Filament\Actions\Action;
+use Filament\Notifications\Notification;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -35,8 +38,36 @@ class MenusTable
                     ->trueIcon('heroicon-o-x-circle')
                     ->falseIcon('heroicon-o-check-circle'),
             ])
+          
             ->recordActions([
                 EditAction::make(),
+
+                Action::make('hapusMenu')
+                    ->label('Hapus')
+                    ->icon('heroicon-o-trash')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->modalHeading('Hapus Menu')
+                    ->modalDescription('Apakah kamu yakin ingin menghapus menu ini? Tindakan ini tidak dapat dibatalkan.')
+                    ->modalSubmitActionLabel('Ya, Hapus Menu')
+                    ->action(function (Menu $record) {
+                        if ($record->reseps()->exists()) {
+                            Notification::make()
+                                ->title('Menu Tidak Bisa Dihapus')
+                                ->body('Menu ini masih memiliki resep. Hapus seluruh resepnya terlebih dahulu melalui halaman Kelola Resep.')
+                                ->warning()
+                                ->send();
+
+                            return;
+                        }
+
+                        $record->delete();
+
+                        Notification::make()
+                            ->title('Menu Berhasil Dihapus')
+                            ->success()
+                            ->send();
+                    }),
             ]);
     }
 }
