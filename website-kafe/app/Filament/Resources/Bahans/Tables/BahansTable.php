@@ -2,12 +2,18 @@
 
 namespace App\Filament\Resources\Bahans\Tables;
 
-use Filament\Actions\EditAction;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Table;
+use App\Models\Bahan;
+use App\Services\ImportBahanService;
 use App\Services\SupplierHargaService;
 use Filament\Actions\Action;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\EditAction;
+use Filament\Forms\Components\FileUpload;
 use Filament\Notifications\Notification;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
+use Illuminate\Support\Facades\Storage;
+use Throwable;
 
 class BahansTable
 {
@@ -15,15 +21,9 @@ class BahansTable
     {
         return $table
             ->columns([
-                TextColumn::make('kode')
-                    ->label('Kode Bahan')
-                    ->searchable()
-                    ->sortable(),
-
                 TextColumn::make('nama')
                     ->label('Nama Bahan')
-                    ->searchable()
-                    ->sortable(),
+                    ->searchable(),
 
                 TextColumn::make('stok_sekarang')
                     ->label('Stok Sekarang')
@@ -33,11 +33,13 @@ class BahansTable
                             ','
                         )
                     )
-                    ->sortable(),
+                    ->sortable()
+                    ->alignCenter(),
 
-                 TextColumn::make('satuan_dasar')
+                TextColumn::make('satuan_dasar')
                     ->label('Satuan Dasar')
-                    ->badge(),
+                    ->badge()
+                    ->alignCenter(),
 
                 TextColumn::make('batas_minimum')
                     ->label('Batas Minimum')
@@ -47,7 +49,8 @@ class BahansTable
                             ','
                         )
                     )
-                    ->sortable(),
+                    ->sortable()
+                    ->alignCenter(),
 
                 TextColumn::make('harga_sekarang')
                     ->label('Harga Sekarang')
@@ -60,10 +63,65 @@ class BahansTable
                     ->label('Tanggal Update Harga')
                     ->date('d/m/Y')
                     ->placeholder('Belum diperbarui')
-                    ->sortable(),
+                    ->sortable()
+                    ->alignCenter(),
             ])
 
             ->headerActions([
+                Action::make('importBahan')
+                    ->label('Import Bahan')
+                    ->icon('heroicon-o-arrow-up-tray')
+                    ->color('success')
+                    ->modalHeading('Import Data Bahan')
+                    ->modalDescription(
+                        'Pilih file CSV yang berisi data bahan.'
+                    )
+                    ->schema([
+                        FileUpload::make('file')
+                            ->label('File CSV')
+                            ->disk('local')
+                            ->directory('imports')
+                            ->acceptedFileTypes([
+                                'text/csv',
+                                'text/plain',
+                                'application/vnd.ms-excel',
+                            ])
+                            ->maxSize(5120)
+                            ->required(),
+                    ])
+                    ->action(function (array $data) {
+                        $path = $data['file'];
+
+                        try {
+                            $lokasiFile = Storage::disk('local')->path($path);
+
+                            $hasil = app(ImportBahanService::class)
+                                ->import($lokasiFile);
+
+                            Notification::make()
+                                ->title('Import Bahan Selesai')
+                                ->body(
+                                    "Berhasil: {$hasil['berhasil']} data. "
+                                    . "Dilewati: {$hasil['dilewati']} data."
+                                )
+                                ->success()
+                                ->persistent()
+                                ->send();
+
+                        } catch (Throwable $e) {
+                            report($e);
+
+                            Notification::make()
+                                ->title('Import Bahan Gagal')
+                                ->body('Terjadi kesalahan saat memproses CSV.')
+                                ->danger()
+                                ->send();
+
+                        } finally {
+                            Storage::disk('local')->delete($path);
+                        }
+                    }),
+
                 Action::make('sinkronkanHarga')
                     ->label('Sinkronkan Harga Supplier')
                     ->icon('heroicon-o-arrow-path')
@@ -71,7 +129,7 @@ class BahansTable
                     ->requiresConfirmation()
                     ->modalHeading('Sinkronkan Harga Supplier')
                     ->modalDescription(
-                        'Sistem akan mengambil harga bahan terbaru dari layanan supplier. Harga yang tersimpan akan diperbarui berdasarkan kode bahan.'
+                        'Sistem akan mengambil harga bahan terbaru dari layanan supplier.'
                     )
                     ->action(function () {
                         $hasil = app(SupplierHargaService::class)->sinkronkan();
@@ -80,9 +138,9 @@ class BahansTable
                             Notification::make()
                                 ->title('Sinkronisasi Berhasil')
                                 ->body(
-                                    $hasil['pesan'] .
-                                    ' Jumlah bahan diperbarui: ' . $hasil['jumlah'] .
-                                    '. Tanggal data: ' . $hasil['tanggal']
+                                    $hasil['pesan']
+                                    . ' Jumlah bahan diperbarui: ' . $hasil['jumlah']
+                                    . '. Tanggal data: ' . $hasil['tanggal']
                                 )
                                 ->success()
                                 ->send();
@@ -93,9 +151,9 @@ class BahansTable
                         Notification::make()
                             ->title('Sinkronisasi Tidak Berhasil')
                             ->body(
-                                $hasil['pesan'] .
-                                ' Harga terakhir tetap digunakan. Tanggal pembaruan terakhir: ' .
-                                ($hasil['tanggal'] ?? 'Belum tersedia')
+                                $hasil['pesan']
+                                . ' Harga terakhir tetap digunakan. Tanggal pembaruan terakhir: '
+                                . ($hasil['tanggal'] ?? 'Belum tersedia')
                             )
                             ->warning()
                             ->send();
@@ -103,7 +161,31 @@ class BahansTable
             ])
 
             ->recordActions([
-                EditAction::make(),
+                
+                DeleteAction::make()
+                    ->label('Hapus')
+                    ->requiresConfirmation()
+                    ->modalHeading('Hapus Bahan')
+                    ->modalDescription(
+                        'Konfirmasi hapus bahan ini?'
+                    )
+                    ->before(function (DeleteAction $action, Bahan $record) {
+                        if ($record->reseps()->exists()) {
+                            Notification::make()
+                                ->title('Bahan Tidak Bisa Dihapus')
+                                ->body(
+                                    'Bahan ini masih digunakan dalam resep. '
+                                    . 'Hapus atau ubah resep yang menggunakannya terlebih dahulu.'
+                                )
+                                ->warning()
+                                ->send();
+
+                            $action->cancel();
+                        }
+                    }),
+
+                    EditAction::make(),
+
             ]);
     }
 }
