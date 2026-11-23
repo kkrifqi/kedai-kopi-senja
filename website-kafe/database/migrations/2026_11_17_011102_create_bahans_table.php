@@ -15,9 +15,9 @@ return new class extends Migration
             $table->id();
             $table->string('kode')->unique();
             $table->string('nama')->unique();
-            $table->decimal('stok_sekarang', 12, 2)->default(0);
+            $table->decimal('stok_sekarang', 12, 3)->default(0);
             $table->enum('satuan_dasar', ['g', 'ml', 'pcs']);
-            $table->decimal('batas_minimum', 12, 2)->default(0);
+            $table->decimal('batas_minimum', 12, 3)->default(0);
             $table->decimal('harga_sekarang', 12, 2)->default(0);
             $table->date('tanggal_update_harga')->nullable();
 

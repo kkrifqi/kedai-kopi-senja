@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Reseps;
 
+use App\Filament\Resources\Reseps\Pages\CreateResep;
 use App\Filament\Resources\Reseps\Pages\EditResep;
 use App\Filament\Resources\Reseps\Pages\ListReseps;
 use App\Filament\Resources\Reseps\Schemas\ResepForm;
@@ -19,16 +20,13 @@ class ResepResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'nama';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Manajemen Kafe';
-
     protected static ?string $pluralModelLabel = 'Resep';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
     protected static ?string $navigationLabel = 'Resep';
 
-
-    public static function form(Schema $schema): Schema
+   public static function form(Schema $schema): Schema
     {
         return ResepForm::configure($schema);
     }
@@ -40,15 +38,14 @@ class ResepResource extends Resource
 
     public static function getRelations(): array
     {
-        return [
-            //
-        ];
+        return [];
     }
 
     public static function getPages(): array
     {
         return [
             'index' => ListReseps::route('/'),
+            'create' => CreateResep::route('/create'),
             'edit' => EditResep::route('/{record}/edit'),
         ];
     }

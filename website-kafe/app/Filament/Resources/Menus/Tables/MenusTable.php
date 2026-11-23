@@ -19,6 +19,11 @@ class MenusTable
                     ->label('Nama Menu')
                     ->searchable(),
 
+                TextColumn::make('kategori')
+                    ->label('Kategori')
+                    ->badge()
+                    ->sortable(),
+
                 TextColumn::make('harga_jual')
                     ->label('Harga Jual')
                     ->formatStateUsing(fn ($state): string =>

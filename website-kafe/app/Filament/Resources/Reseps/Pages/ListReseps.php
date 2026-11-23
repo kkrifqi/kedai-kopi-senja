@@ -22,6 +22,7 @@ class ListReseps extends ListRecords
                 ->label('Import Resep')
                 ->icon('heroicon-o-arrow-up-tray')
                 ->color('success')
+                ->modalHeading('Import Data Resep')
                 ->schema([
                     FileUpload::make('file')
                         ->label('File CSV Resep')
@@ -47,8 +48,7 @@ class ListReseps extends ListRecords
                             ->title('Import Resep Selesai')
                             ->body(
                                 "Berhasil: {$hasil['berhasil']} resep.\n" .
-                                "Dilewati: {$hasil['dilewati']} baris.\n\n" .
-                                implode("\n", array_slice($hasil['detail'], 0, 10))
+                                "Dilewati: {$hasil['dilewati']} baris.\n\n" 
                             );
 
                         if ($hasil['dilewati'] > 0) {

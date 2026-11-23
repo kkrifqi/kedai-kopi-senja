@@ -19,8 +19,6 @@ class BahanResource extends Resource
     protected static ?string $model = Bahan::class;
 
     protected static ?string $recordTitleAttribute = 'nama';
-    
-    protected static string|\UnitEnum|null $navigationGroup = 'Manajemen Kafe';
 
     protected static ?string $pluralModelLabel = 'Bahan';
 

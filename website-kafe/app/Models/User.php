@@ -56,7 +56,7 @@ class User extends Authenticatable implements FilamentUser, HasName
 
     public function canAccessPanel(Panel $panel): bool
     {
-        return in_array($this->role, ['Manajer', 'Kasir'], true);
+        return $this->role === 'Manajer';
     }
 
     public function getFilamentName(): string
