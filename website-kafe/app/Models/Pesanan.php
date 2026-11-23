@@ -2,15 +2,12 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Pesanan extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
         'pelanggan_id',
         'kasir_id',
@@ -24,33 +21,22 @@ class Pesanan extends Model
         'tanggal_pesanan',
     ];
 
-    protected function casts(): array
+    protected $casts = [
+        'tanggal_pesanan' => 'datetime',
+    ];
+
+    public function detailPesanans(): HasMany
     {
-        return [
-            'no_meja' => 'integer',
-            'subtotal' => 'decimal:2',
-            'service' => 'decimal:2',
-            'pajak' => 'decimal:2',
-            'total_harga' => 'decimal:2',
-            'tanggal_pesanan' => 'datetime',
-        ];
+        return $this->hasMany(DetailPesanan::class, 'pesanan_id');
     }
 
-    // Relasi ke pelanggan
-    public function pelanggan(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'pelanggan_id');
-    }
-
-    // Relasi ke kasir
     public function kasir(): BelongsTo
     {
         return $this->belongsTo(User::class, 'kasir_id');
     }
 
-    // Relasi ke detail pesanan
-    public function detailPesanans(): HasMany
+    public function pelanggan(): BelongsTo
     {
-        return $this->hasMany(DetailPesanan::class, 'pesanan_id');
+        return $this->belongsTo(User::class, 'pelanggan_id');
     }
 }
