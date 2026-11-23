@@ -17,11 +17,13 @@ class ResepResource extends Resource
 {
     protected static ?string $model = Menu::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
-
     protected static ?string $recordTitleAttribute = 'nama';
 
     protected static string|\UnitEnum|null $navigationGroup = 'Manajemen Kafe';
+
+    protected static ?string $pluralModelLabel = 'Resep';
+
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
     protected static ?string $navigationLabel = 'Resep';
 

@@ -18,11 +18,13 @@ class BahanResource extends Resource
 {
     protected static ?string $model = Bahan::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
-
     protected static ?string $recordTitleAttribute = 'nama';
     
     protected static string|\UnitEnum|null $navigationGroup = 'Manajemen Kafe';
+
+    protected static ?string $pluralModelLabel = 'Bahan';
+
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
     protected static ?string $navigationLabel = 'Bahan';
 

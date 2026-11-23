@@ -26,6 +26,25 @@ class Menu extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::creating(function ($menu) {
+            if (empty($menu->kode)) {
+                $nomor = 15;
+
+                do {
+                    $kode = 'BHN-' . str_pad($nomor, 3, '0', STR_PAD_LEFT);
+
+                    $sudahAda = static::where('kode', $kode)->exists();
+
+                    $nomor++;
+                } while ($sudahAda);
+
+                $menu->kode = $kode;
+            }
+        });
+    }
+
     // Relasi ke tabel Resep
     public function reseps(): HasMany
     {

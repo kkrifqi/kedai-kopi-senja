@@ -11,7 +11,9 @@ return new class extends Migration
     {
         Schema::create('menus', function (Blueprint $table) {
             $table->id();
+            $table->string('kode')->unique();
             $table->string('nama');
+            $table->enum('kategori', ['Makanan', 'Minuman']);
             $table->decimal('harga_jual', 12, 2);
             $table->boolean('status_aktif')->default(true);
             $table->boolean('status_habis')->default(false);

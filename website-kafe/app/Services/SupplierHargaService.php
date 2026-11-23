@@ -28,7 +28,6 @@ class SupplierHargaService
                 ->timeout(10)
                 ->get($url . '/harga-bahan');
 
-            // Termasuk status 401 dan status selain 2xx.
             if (! $response->successful()) {
                 return $this->gagal('Supplier sedang tidak tersedia.');
             }
@@ -44,51 +43,77 @@ class SupplierHargaService
             }
 
             $tanggal = Carbon::parse($hasil['diperbarui'])->toDateString();
-            $jumlah = 0;
 
-            DB::transaction(function () use ($hasil, $tanggal, &$jumlah) {
+            $jumlah = 0;
+            $dilewati = 0;
+
+            DB::transaction(function () use (
+                $hasil,
+                $tanggal,
+                &$jumlah,
+                &$dilewati
+            ) {
                 foreach ($hasil['data'] as $item) {
                     if (
                         ! is_array($item) ||
                         empty($item['kode']) ||
-                        empty($item['nama']) ||
-                        ! in_array($item['satuan_dasar'] ?? null, ['g', 'ml', 'pcs'], true) ||
+                        ! in_array(
+                            $item['satuan_dasar'] ?? null,
+                            ['g', 'ml', 'pcs'],
+                            true
+                        ) ||
                         ! isset($item['harga_per_satuan']) ||
                         ! is_numeric($item['harga_per_satuan']) ||
-                        $item['harga_per_satuan'] < 0
+                        (float) $item['harga_per_satuan'] < 0
                     ) {
+                        $dilewati++;
                         continue;
                     }
 
-                    Bahan::updateOrCreate(
-                        ['kode' => $item['kode']],
-                        [
-                            'nama' => $item['nama'],
-                            'satuan_dasar' => $item['satuan_dasar'],
-                            'harga_sekarang' => $item['harga_per_satuan'],
-                            'tanggal_update_harga' => $tanggal,
-                        ]
-                    );
+                    // Cari bahan yang sudah ada berdasarkan kode.
+                    $bahan = Bahan::where('kode', $item['kode'])
+                        ->first();
+
+                    // Jika tidak ditemukan, jangan membuat bahan baru.
+                    if (! $bahan) {
+                        $dilewati++;
+                        continue;
+                    }
+
+                    // Hanya perbarui harga dan tanggal harga.
+                    $bahan->update([
+                        'harga_sekarang' => $item['harga_per_satuan'],
+                        'tanggal_update_harga' => $tanggal,
+                    ]);
 
                     $jumlah++;
                 }
             });
 
             if ($jumlah === 0) {
-                return $this->gagal('Tidak ada data harga supplier yang valid.');
+                return [
+                    'berhasil' => false,
+                    'jumlah' => 0,
+                    'dilewati' => $dilewati,
+                    'tanggal' => $tanggal,
+                    'pesan' => 'Tidak ada harga bahan yang cocok untuk diperbarui.',
+                ];
             }
 
             return [
                 'berhasil' => true,
                 'jumlah' => $jumlah,
+                'dilewati' => $dilewati,
                 'tanggal' => $tanggal,
                 'pesan' => 'Harga bahan berhasil diperbarui.',
             ];
+
         } catch (Throwable $e) {
-            // Jangan tampilkan detail error atau API key ke pengguna.
             report($e);
 
-            return $this->gagal('Supplier tidak dapat dihubungi. Harga tersimpan tetap digunakan.');
+            return $this->gagal(
+                'Supplier tidak dapat dihubungi. Harga tersimpan tetap digunakan.'
+            );
         }
     }
 
@@ -97,6 +122,7 @@ class SupplierHargaService
         return [
             'berhasil' => false,
             'jumlah' => 0,
+            'dilewati' => 0,
             'tanggal' => Bahan::max('tanggal_update_harga'),
             'pesan' => $pesan,
         ];

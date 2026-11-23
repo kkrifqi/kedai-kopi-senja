@@ -9,7 +9,6 @@ use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-
 class MenusTable
 {
     public static function configure(Table $table): Table
@@ -18,25 +17,34 @@ class MenusTable
             ->columns([
                 TextColumn::make('nama')
                     ->label('Nama Menu')
-                    ->searchable()
-                    ->sortable(),
+                    ->searchable(),
 
                 TextColumn::make('harga_jual')
                     ->label('Harga Jual')
-                    ->formatStateUsing(fn ($state) =>
-                        'Rp ' . number_format((float) $state, 2, ',', '.')
+                    ->formatStateUsing(fn ($state): string =>
+                        'Rp ' . rtrim(
+                            rtrim(number_format((float) $state, 2, ',', '.'), '0'),
+                            ','
+                        )
                     )
                     ->sortable(),
 
                 IconColumn::make('status_aktif')
-                    ->label('Aktif')
-                    ->boolean(),
-
-                IconColumn::make('status_habis')
-                    ->label('Ketersediaan')
+                    ->label('Menu Aktif')
                     ->boolean()
-                    ->trueIcon('heroicon-o-x-circle')
-                    ->falseIcon('heroicon-o-check-circle'),
+                    ->alignCenter(),
+
+                TextColumn::make('status_habis')
+                    ->label('Ketersediaan')
+                    ->formatStateUsing(fn ($state) => $state ? 'Habis' : 'Tersedia')
+                    ->color(fn ($state) => $state ? 'danger' : 'success')
+                    ->weight('bold')
+                    ->badge()
+                    ->alignCenter(),
+            ])
+
+            ->headerActions([
+                
             ])
           
             ->recordActions([

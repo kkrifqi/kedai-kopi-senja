@@ -3,17 +3,11 @@
 namespace App\Filament\Resources\Bahans\Tables;
 
 use App\Models\Bahan;
-use App\Services\ImportBahanService;
-use App\Services\SupplierHargaService;
-use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
-use Filament\Forms\Components\FileUpload;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Illuminate\Support\Facades\Storage;
-use Throwable;
 
 class BahansTable
 {
@@ -34,12 +28,11 @@ class BahansTable
                         )
                     )
                     ->sortable()
-                    ->alignCenter(),
+                    ->alignRight(),
 
                 TextColumn::make('satuan_dasar')
                     ->label('Satuan Dasar')
-                    ->badge()
-                    ->alignCenter(),
+                    ->badge(),
 
                 TextColumn::make('batas_minimum')
                     ->label('Batas Minimum')
@@ -49,13 +42,15 @@ class BahansTable
                             ','
                         )
                     )
-                    ->sortable()
-                    ->alignCenter(),
+                    ->sortable(),
 
                 TextColumn::make('harga_sekarang')
                     ->label('Harga Sekarang')
                     ->formatStateUsing(fn ($state): string =>
-                        'Rp ' . number_format((float) $state, 2, ',', '.')
+                        'Rp ' . rtrim(
+                            rtrim(number_format((float) $state, 2, ',', '.'), '0'),
+                            ','
+                        )
                     )
                     ->sortable(),
 
@@ -67,100 +62,8 @@ class BahansTable
                     ->alignCenter(),
             ])
 
-            ->headerActions([
-                Action::make('importBahan')
-                    ->label('Import Bahan')
-                    ->icon('heroicon-o-arrow-up-tray')
-                    ->color('success')
-                    ->modalHeading('Import Data Bahan')
-                    ->modalDescription(
-                        'Pilih file CSV yang berisi data bahan.'
-                    )
-                    ->schema([
-                        FileUpload::make('file')
-                            ->label('File CSV')
-                            ->disk('local')
-                            ->directory('imports')
-                            ->acceptedFileTypes([
-                                'text/csv',
-                                'text/plain',
-                                'application/vnd.ms-excel',
-                            ])
-                            ->maxSize(5120)
-                            ->required(),
-                    ])
-                    ->action(function (array $data) {
-                        $path = $data['file'];
-
-                        try {
-                            $lokasiFile = Storage::disk('local')->path($path);
-
-                            $hasil = app(ImportBahanService::class)
-                                ->import($lokasiFile);
-
-                            Notification::make()
-                                ->title('Import Bahan Selesai')
-                                ->body(
-                                    "Berhasil: {$hasil['berhasil']} data. "
-                                    . "Dilewati: {$hasil['dilewati']} data."
-                                )
-                                ->success()
-                                ->persistent()
-                                ->send();
-
-                        } catch (Throwable $e) {
-                            report($e);
-
-                            Notification::make()
-                                ->title('Import Bahan Gagal')
-                                ->body('Terjadi kesalahan saat memproses CSV.')
-                                ->danger()
-                                ->send();
-
-                        } finally {
-                            Storage::disk('local')->delete($path);
-                        }
-                    }),
-
-                Action::make('sinkronkanHarga')
-                    ->label('Sinkronkan Harga Supplier')
-                    ->icon('heroicon-o-arrow-path')
-                    ->color('info')
-                    ->requiresConfirmation()
-                    ->modalHeading('Sinkronkan Harga Supplier')
-                    ->modalDescription(
-                        'Sistem akan mengambil harga bahan terbaru dari layanan supplier.'
-                    )
-                    ->action(function () {
-                        $hasil = app(SupplierHargaService::class)->sinkronkan();
-
-                        if ($hasil['berhasil']) {
-                            Notification::make()
-                                ->title('Sinkronisasi Berhasil')
-                                ->body(
-                                    $hasil['pesan']
-                                    . ' Jumlah bahan diperbarui: ' . $hasil['jumlah']
-                                    . '. Tanggal data: ' . $hasil['tanggal']
-                                )
-                                ->success()
-                                ->send();
-
-                            return;
-                        }
-
-                        Notification::make()
-                            ->title('Sinkronisasi Tidak Berhasil')
-                            ->body(
-                                $hasil['pesan']
-                                . ' Harga terakhir tetap digunakan. Tanggal pembaruan terakhir: '
-                                . ($hasil['tanggal'] ?? 'Belum tersedia')
-                            )
-                            ->warning()
-                            ->send();
-                    }),
-            ])
-
             ->recordActions([
+                EditAction::make(),
                 
                 DeleteAction::make()
                     ->label('Hapus')
@@ -184,7 +87,6 @@ class BahansTable
                         }
                     }),
 
-                    EditAction::make(),
 
             ]);
     }
