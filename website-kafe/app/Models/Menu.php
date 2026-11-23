@@ -11,7 +11,9 @@ class Menu extends Model
     use HasFactory;
 
     protected $fillable = [
+        'kode',
         'nama',
+        'kategori',
         'harga_jual',
         'status_aktif',
         'status_habis',
@@ -30,10 +32,10 @@ class Menu extends Model
     {
         static::creating(function ($menu) {
             if (empty($menu->kode)) {
-                $nomor = 15;
+                $nomor = 1;
 
                 do {
-                    $kode = 'BHN-' . str_pad($nomor, 3, '0', STR_PAD_LEFT);
+                    $kode = 'MNU-' . str_pad($nomor, 3, '0', STR_PAD_LEFT);
 
                     $sudahAda = static::where('kode', $kode)->exists();
 

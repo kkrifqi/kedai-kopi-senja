@@ -34,7 +34,7 @@ class Bahan extends Model
     {
         static::creating(function ($bahan) {
             if (empty($bahan->kode)) {
-                $nomor = 21;
+                $nomor = 1;
 
                 do {
                     $kode = 'BHN-' . str_pad($nomor, 3, '0', STR_PAD_LEFT);
