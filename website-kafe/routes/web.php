@@ -9,6 +9,8 @@ Route::get('/', fn () => redirect()->route('login'));
 Route::get('/login', [AuthController::class, 'tampilLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'prosesLogin'])->name('login.proses');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
+Route::get('/ganti-password', [AuthController::class, 'tampilGantiPassword'])->name('password.ganti');
+Route::post('/ganti-password', [AuthController::class, 'prosesGantiPassword'])->name('password.ganti.proses');
 
 // Grup halaman khusus Kasir
 Route::middleware(['auth', 'peran:kasir'])

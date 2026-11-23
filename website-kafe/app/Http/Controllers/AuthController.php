@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
@@ -58,5 +60,48 @@ class AuthController extends Controller
         return redirect()->route('login')->withErrors([
             'username' => 'Peran akun tidak diizinkan mengakses web.',
         ]);
+    }
+
+    public function tampilGantiPassword()
+    {
+        return view('auth.ganti-password');
+    }
+
+    public function prosesGantiPassword(Request $permintaan)
+    {
+        $data = $permintaan->validate([
+            'username' => ['required', 'string'],
+            'password_lama' => ['required', 'string'],
+            'password_baru' => ['required', 'string', 'min:8', 'confirmed', 'different:password_lama'],
+        ], [
+            'password_baru.min' => 'Password baru minimal 8 karakter.',
+            'password_baru.confirmed' => 'Konfirmasi password baru tidak cocok.',
+            'password_baru.different' => 'Password baru tidak boleh sama dengan password lama.',
+        ]);
+
+        $pengguna = User::where('username', $data['username'])
+            ->whereIn('role', ['Manajer', 'Kasir'])
+            ->first();
+
+        if (! $pengguna || ! Hash::check($data['password_lama'], $pengguna->password)) {
+            return back()
+                ->withErrors(['username' => 'Username atau password lama tidak cocok.'])
+                ->onlyInput('username');
+        }
+
+        $pengguna->update([
+            'password' => Hash::make($data['password_baru']),
+        ]);
+
+        // Jika staf sedang dalam kondisi login, logout dulu agar login ulang pakai password baru
+        if (Auth::check()) {
+            Auth::logout();
+            $permintaan->session()->invalidate();
+            $permintaan->session()->regenerateToken();
+        }
+
+        return redirect()
+            ->route('login')
+            ->with('sukses', 'Password berhasil diganti. Silakan login menggunakan password baru.');
     }
 }
