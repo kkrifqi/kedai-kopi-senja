@@ -57,4 +57,39 @@ class PesananController extends Controller
 
         return view('kasir.struk', compact('pesanan'));
     }
+
+    public function daftarPesanan(Request $permintaan)
+    {
+        $filterStatus = $permintaan->query('status');
+
+        $query = Pesanan::with(['detailPesanans.menu', 'pelanggan', 'kasir'])
+            ->orderByDesc('tanggal_pesanan')
+            ->orderByDesc('id');
+
+        if (in_array($filterStatus, ['Baru', 'Diproses', 'Selesai', 'Dibatalkan'])) {
+            $query->where('status', $filterStatus);
+        }
+
+        $daftarPesanan = $query->paginate(15)->withQueryString();
+
+        return view('kasir.daftar-pesanan', compact('daftarPesanan', 'filterStatus'));
+    }
+
+    public function ubahStatus(Request $permintaan, Pesanan $pesanan, PesananService $layananPesanan)
+    {
+        $data = $permintaan->validate([
+            'status' => ['required', 'in:Diproses,Selesai'],
+        ]);
+
+        $layananPesanan->ubahStatus($pesanan, $data['status']);
+
+        return back()->with('sukses', "Status pesanan #{$pesanan->id} berhasil diubah menjadi {$data['status']}.");
+    }
+
+    public function batalkan(Pesanan $pesanan, PesananService $layananPesanan)
+    {
+        $layananPesanan->batalkanPesanan($pesanan);
+
+        return back()->with('sukses', "Pesanan #{$pesanan->id} dibatalkan dan stok bahan telah dikembalikan.");
+    }
 }

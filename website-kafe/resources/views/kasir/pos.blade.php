@@ -8,7 +8,8 @@
 </head>
 <body class="bg-stone-100 min-h-screen">
     <nav class="bg-white border-b border-stone-200 px-6 py-4 flex items-center justify-between">
-        <div class="font-bold text-lg text-stone-800">POS Kasir — Kedai Kopi Senja</div>
+        <div class="font-bold text-lg text-stone-800">Kopi Senja</div>
+        <a href="{{ route('kasir.pesanan.index') }}">Daftar Pesanan</a>
         <div class="flex items-center gap-4">
             <span class="text-sm text-stone-600">{{ auth()->user()->name }} (Kasir)</span>
             <form method="POST" action="{{ route('logout') }}">

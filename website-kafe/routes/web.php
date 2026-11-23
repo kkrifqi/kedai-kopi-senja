@@ -17,5 +17,8 @@ Route::middleware(['auth', 'peran:kasir'])
     ->group(function () {
         Route::get('/', [PesananController::class, 'halamanPos'])->name('dashboard');
         Route::post('/pesanan', [PesananController::class, 'simpanPesanan'])->name('pesanan.simpan');
+        Route::get('/pesanan', [PesananController::class, 'daftarPesanan'])->name('pesanan.index');
         Route::get('/pesanan/{pesanan}/struk', [PesananController::class, 'tampilStruk'])->name('pesanan.struk');
+        Route::patch('/pesanan/{pesanan}/status', [PesananController::class, 'ubahStatus'])->name('pesanan.status');
+        Route::patch('/pesanan/{pesanan}/batal', [PesananController::class, 'batalkan'])->name('pesanan.batal');
     });

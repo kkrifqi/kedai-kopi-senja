@@ -177,4 +177,87 @@ class PesananService
             return $pesanan->load('detailPesanans.menu');
         });
     }
+
+    public function ubahStatus(Pesanan $pesanan, string $statusTujuan): Pesanan
+    {
+        return DB::transaction(function () use ($pesanan, $statusTujuan) {
+            $pesananTerkunci = Pesanan::where('id', $pesanan->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $alurSah = [
+                'Baru' => 'Diproses',
+                'Diproses' => 'Selesai',
+            ];
+
+            $statusBerikutnya = $alurSah[$pesananTerkunci->status] ?? null;
+
+            if ($statusBerikutnya !== $statusTujuan) {
+                throw ValidationException::withMessages([
+                    'status' => "Status tidak bisa diubah dari '{$pesananTerkunci->status}' ke '{$statusTujuan}'. Perubahan status harus berjenjang (Baru → Diproses → Selesai).",
+                ]);
+            }
+
+            $pesananTerkunci->status = $statusTujuan;
+            $pesananTerkunci->save();
+
+            return $pesananTerkunci;
+        });
+    }
+
+    /**
+     * Batalkan pesanan (hanya saat status masih Baru) dan kembalikan stok bahan sesuai resep.
+     */
+    public function batalkanPesanan(Pesanan $pesanan): Pesanan
+    {
+        return DB::transaction(function () use ($pesanan) {
+            $pesananTerkunci = Pesanan::with('detailPesanans.menu.reseps')
+                ->where('id', $pesanan->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($pesananTerkunci->status !== 'Baru') {
+                throw ValidationException::withMessages([
+                    'status' => "Pesanan #{$pesananTerkunci->id} tidak dapat dibatalkan karena status sudah '{$pesananTerkunci->status}'. Pembatalan hanya boleh saat status Baru.",
+                ]);
+            }
+
+            // 1. Hitung total bahan yang harus dikembalikan dari seluruh item pesanan
+            $pengembalianBahan = []; // [bahan_id => total_takaran]
+
+            foreach ($pesananTerkunci->detailPesanans as $detail) {
+                if (! $detail->menu) {
+                    continue;
+                }
+
+                foreach ($detail->menu->reseps as $resep) {
+                    $bahanId = $resep->bahan_id;
+                    $jumlahKembali = (float) $resep->takaran * (int) $detail->jumlah_porsi;
+                    $pengembalianBahan[$bahanId] = ($pengembalianBahan[$bahanId] ?? 0) + $jumlahKembali;
+                }
+            }
+
+            // 2. Kunci baris bahan lalu tambahkan kembali stoknya
+            if (! empty($pengembalianBahan)) {
+                $daftarBahan = Bahan::whereIn('id', array_keys($pengembalianBahan))
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('id');
+
+                foreach ($pengembalianBahan as $bahanId => $jumlahKembali) {
+                    $bahan = $daftarBahan->get($bahanId);
+                    if ($bahan) {
+                        $bahan->stok_sekarang = (float) $bahan->stok_sekarang + $jumlahKembali;
+                        $bahan->save();
+                    }
+                }
+            }
+
+            // 3. Ubah status menjadi Dibatalkan
+            $pesananTerkunci->status = 'Dibatalkan';
+            $pesananTerkunci->save();
+
+            return $pesananTerkunci;
+        });
+    }
 }
