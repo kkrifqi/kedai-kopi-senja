@@ -1,58 +1,136 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Kedai Kopi Senja
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Sistem POS dan manajemen operasional Kedai Kopi Senja berbasis Laravel. Aplikasi menyediakan panel manajer menggunakan Filament PHP serta antarmuka kasir berbasis Laravel Blade dan Tailwind CSS.
 
-## About Laravel
+## Fitur Utama
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+### Autentikasi Staf
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- Satu halaman login staf di `/login`.
+- Setelah login, Manajer diarahkan ke panel Filament di `/admin`, sedangkan Kasir diarahkan ke POS di `/kasir`.
+- Middleware `CekPeran` membatasi akses halaman kasir berdasarkan role.
+- Ganti password tersedia di `/ganti-password`. Proses ini memverifikasi username dan password lama sebelum menyimpan password baru dengan panjang minimal 8 karakter.
+- Akses panel Filament dibatasi untuk pengguna dengan role Manajer.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### Modul Manajer — `/admin`
 
-## Learning Laravel
+- Mengelola data bahan, menu, dan resep.
+- Mencatat penerimaan stok bahan.
+- Mengimpor data bahan, menu, dan resep melalui CSV.
+- Menyinkronkan harga bahan dari layanan supplier yang dikonfigurasi.
+- Melihat laporan melalui tiga tab:
+  - **Penjualan per Menu:** jumlah porsi terjual dan pendapatan dari harga satuan yang direkam pada transaksi. Pesanan berstatus `Dibatalkan` dikecualikan.
+  - **Bahan Menipis:** bahan dengan stok saat ini kurang dari atau sama dengan batas minimum, beserta status `Menipis` atau `Habis`.
+  - **HPP & Margin per Menu:** kategori, harga jual, HPP, dan margin setiap menu.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### Modul Kasir — `/kasir`
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- Membuat pesanan dari menu aktif yang memiliki resep dan stok bahan yang mencukupi.
+- Memasukkan nomor meja 1–10 serta metode bayar `Tunai` atau `QRIS`.
+- Melihat dan mencetak struk pesanan.
+- Melihat daftar pesanan dan memfilternya berdasarkan status.
+- Memproses pesanan melalui transisi status `Baru` → `Diproses` → `Selesai`.
+- Membatalkan pesanan yang masih berstatus `Baru`; stok bahan dikembalikan sesuai resep.
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+## Aturan Bisnis Penting
 
-## Agentic Development
+- **Perhitungan total:** service charge sebesar 5% dari subtotal. Pajak sebesar 10% dihitung dari subtotal ditambah service charge. Total harga adalah subtotal + service charge + pajak.
+- **Snapshot harga transaksi:** harga jual menu saat pesanan dibuat disimpan di `harga_satuan_terekam`. Laporan penjualan menggunakan harga tersebut, bukan harga menu terbaru.
+- **Validasi dan pemotongan stok:** sistem mengakumulasi kebutuhan bahan dari semua item pesanan, mengunci baris bahan saat transaksi, memeriksa kecukupan stok, lalu mengurangi stok. Kegagalan validasi membatalkan transaksi.
+- **Pembatalan pesanan:** hanya pesanan berstatus `Baru` yang dapat dibatalkan. Stok bahan dikembalikan berdasarkan resep menu pada detail pesanan.
+- **HPP dan margin:** HPP dihitung sebagai jumlah takaran resep dikalikan harga bahan saat ini (`Σ takaran × harga_sekarang`). Margin dihitung sebagai harga jual dikurangi HPP.
+- **Ketersediaan menu:** POS memeriksa status aktif, keberadaan resep, dan kecukupan stok bahan. Menu tanpa resep tidak dapat dipesan.
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Struktur Database
+
+Tabel utama domain bisnis:
+
+| Tabel | Keterangan |
+|---|---|
+| `users` | Akun staf dan role Manajer/Kasir. |
+| `bahans` | Master bahan, satuan dasar, stok, batas minimum, dan harga saat ini. |
+| `menus` | Master menu, kategori, harga jual, dan status aktif. |
+| `reseps` | Relasi bahan dan takaran yang diperlukan untuk satu porsi menu. |
+| `stok_masuks` | Pencatatan penerimaan stok oleh Manajer. |
+| `detail_stok_masuks` | Rincian bahan dan jumlah pada setiap penerimaan stok. |
+| `pesanans` | Data transaksi, meja, metode bayar, status, dan rincian nilai transaksi. |
+| `detail_pesanans` | Item menu, jumlah porsi, dan snapshot harga satuan pada transaksi. |
+
+Satuan dasar bahan yang digunakan adalah `g`, `ml`, dan `pcs`. Pesanan memiliki status `Baru`, `Diproses`, `Selesai`, atau `Dibatalkan`.
+
+## Prasyarat
+
+- PHP versi 8.3 atau lebih baru.
+- Composer.
+- MySQL atau MariaDB.
+- Git.
+
+## Instalasi Lokal
+
+Contoh berikut menjalankan aplikasi dari folder `website-kafe` di dalam repository:
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+git clone https://github.com/kkrifqi/kedai-kopi-senja.git
+cd kedai-kopi-senja/website-kafe
+composer install
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Salin `.env.example` menjadi `.env`, lalu sesuaikan konfigurasi aplikasi dan database:
 
-## Contributing
+```bash
+cp .env.example .env
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Atur koneksi database MySQL/MariaDB di `.env`, misalnya:
 
-## Code of Conduct
+```dotenv
+APP_NAME="Kedai Kopi Senja"
+APP_ENV=local
+APP_DEBUG=true
+APP_URL=http://localhost:8000
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=kedai_kopi_senja
+DB_USERNAME=root
+DB_PASSWORD=
 
-## Security Vulnerabilities
+PASSWORD_MANAJER=GANTI_DENGAN_PASSWORD_KUAT
+PASSWORD_KASIR=GANTI_DENGAN_PASSWORD_KUAT
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Buat database `kedai_kopi_senja` pada MySQL/MariaDB, kemudian jalankan:
 
-## License
+```bash
+php artisan key:generate
+php artisan migrate
+php artisan db:seed --class=UserSeeder
+php artisan serve
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Aplikasi tersedia di `http://localhost:8000`.
+
+> **Catatan seeding:** `UserSeeder` membuat akun staf dengan password dari `PASSWORD_MANAJER` dan `PASSWORD_KASIR`. Saat ini `DatabaseSeeder` masih menggunakan factory bawaan Laravel dan belum memanggil `UserSeeder`; factory tersebut tidak sesuai dengan kolom tabel `users` proyek ini. Karena itu, `php artisan migrate --seed` tidak dapat digunakan untuk setup saat ini. Jalankan migrasi dan `UserSeeder` secara terpisah seperti perintah di atas.
+
+### Alternatif menyalin `.env` di PowerShell
+
+Jika menggunakan Windows PowerShell, gunakan:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+## Akun Demo / Default Login
+
+Akun berikut dibuat oleh `UserSeeder`. Isi kolom password dengan nilai yang Anda atur sendiri pada `.env`; repository tidak menyediakan password default.
+
+| Role | Username | Password |
+|---|---|---|
+| Manajer | `manajer` | `<isi sesuai PASSWORD_MANAJER di .env>` |
+| Kasir | `kasir` | `<isi sesuai PASSWORD_KASIR di .env>` |
+
+## Rencana Pengembangan Selanjutnya
+
+- Menyediakan REST API untuk mendukung aplikasi mobile pelanggan.
+- Mengembangkan lebih lanjut integrasi supplier; sinkronisasi harga bahan dari panel Manajer sudah tersedia.
