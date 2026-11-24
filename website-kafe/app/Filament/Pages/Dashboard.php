@@ -2,73 +2,46 @@
 
 namespace App\Filament\Pages;
 
-use App\Models\Bahan;
+use App\Filament\Widgets\LaporanPenjualanWidget;
+use App\Filament\Widgets\LaporanBahanMenipisWidget;
+use APp\Filament\Widgets\LaporanMarginMenuWidget;
+use Filament\Actions\Action;
 use Filament\Pages\Dashboard as BaseDashboard;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 
 class Dashboard extends BaseDashboard
 {
     protected static ?string $navigationLabel = 'Laporan';
-    protected static ?string $title = 'Laporan Manajer';
-
-    protected string $view = 'filament.pages.dashboard';
+    protected static ?string $title = 'Laporan';
 
     public string $tabAktif = 'penjualan';
 
-    public string $inputDari = '';
-    public string $inputSampai = '';
-
-    public string $tanggalDari = '';
-    public string $tanggalSampai = '';
-
-    public function mount(): void
+    protected function getHeaderActions(): array
     {
-        $awalBulan = now()->startOfMonth()->format('Y-m-d');
-        $hariIni = now()->format('Y-m-d');
+        return [
+            Action::make('tabPenjualan')
+                ->label('Penjualan per Menu')
+                ->color(fn () => $this->tabAktif === 'penjualan' ? 'warning' : 'gray')
+                ->action(fn () => $this->tabAktif = 'penjualan'),
 
-        $this->inputDari = $awalBulan;
-        $this->inputSampai = $hariIni;
-        $this->tanggalDari = $awalBulan;
-        $this->tanggalSampai = $hariIni;
+            Action::make('tabBahanMenipis')
+                ->label('Bahan Menipis')
+                ->color(fn () => $this->tabAktif === 'bahan_menipis' ? 'warning' : 'gray')
+                ->action(fn () => $this->tabAktif = 'bahan_menipis'),
+
+            Action::make('tabMargin')
+                ->label('Margin per Menu')
+                ->color(fn () => $this->tabAktif === 'margin' ? 'warning' : 'gray')
+                ->action(fn () => $this->tabAktif = 'margin'),
+        ];
     }
 
-    public function gantiTab(string $tab): void
+    public function getWidgets(): array
     {
-        $this->tabAktif = $tab;
-    }
-
-    public function tampilkanLaporan(): void
-    {
-        $this->tanggalDari = $this->inputDari ?: now()->startOfMonth()->format('Y-m-d');
-        $this->tanggalSampai = $this->inputSampai ?: now()->format('Y-m-d');
-    }
-
-    public function getDataPenjualanProperty()
-    {
-        $mulai = Carbon::parse($this->tanggalDari)->startOfDay();
-        $selesai = Carbon::parse($this->tanggalSampai)->endOfDay();
-
-        return DB::table('detail_pesanans')
-            ->join('pesanans', 'detail_pesanans.pesanan_id', '=', 'pesanans.id')
-            ->join('menus', 'detail_pesanans.menu_id', '=', 'menus.id')
-            ->where('pesanans.status', '!=', 'Dibatalkan')
-            ->whereBetween('pesanans.tanggal_pesanan', [$mulai, $selesai])
-            ->select(
-                'menus.id',
-                'menus.nama',
-                DB::raw('SUM(detail_pesanans.jumlah_porsi) as terjual'),
-                DB::raw('SUM(detail_pesanans.jumlah_porsi * detail_pesanans.harga_satuan_terekam) as pendapatan')
-            )
-            ->groupBy('menus.id', 'menus.nama')
-            ->orderByDesc('pendapatan')
-            ->get();
-    }
-
-    public function getDataBahanMenipisProperty()
-    {
-        return Bahan::whereColumn('stok_sekarang', '<=', 'batas_minimum')
-            ->orderBy('stok_sekarang')
-            ->get();
+        return match ($this->tabAktif) {
+            'penjualan' => [LaporanPenjualanWidget::class],
+            'bahan_menipis' => [LaporanBahanMenipisWidget::class], 
+            'margin' => [LaporanMarginMenuWidget::class],       
+            default => [LaporanPenjualanWidget::class],
+        };
     }
 }
